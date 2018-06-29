@@ -20,25 +20,17 @@ start:
     mov.b &CALDCO_1MHZ, &DCOCTL
     mov.b #2, &P1OUT
     mov.b #2, &P1DIR
-    mov.w #10C0h, r11
     ;rjmp timer ;uncomment for DCO check/calibration
 
 ; prints out TLV settings
 repeat:
-    mov r11, r8
-    call #UART_SEND_H4
-    mov #':', r8
-    call #UART_SEND
-    mov @r11, r8
-    call #UART_SEND_H4
+    call #UART_RECEIVE
+    call #UART_SEND_H2
     mov #13, r8
     call #UART_SEND
     mov #10, r8
     call #UART_SEND
-    add #2, r11
-    and.w #10FFh, r11
-    bis.w #10C0h, r11
-    mov.w #400, r8
+    mov.w #10, r8
     call #DELAY
     jmp repeat
 
@@ -54,8 +46,8 @@ timer:
     xor #2, &P1OUT
     jmp timer
 
-;===============================
-; sends hex char from r8 at 9600
+;=======================
+; sends hex char from r8
 UART_SEND_H1:
     push r8
     bic.b #0F0h, r8
@@ -68,8 +60,8 @@ UART_SEND_H1:
     pop r8
     ret
 
-;===============================
-; sends hex byte from r8 at 9600
+;=======================
+; sends hex byte from r8
 UART_SEND_H2:
     push r8
     rra r8
@@ -81,8 +73,8 @@ UART_SEND_H2:
     call #UART_SEND_H1
     ret
 
-;===============================
-; sends hex byte from r8 at 9600
+;=======================
+; sends hex byte from r8
 UART_SEND_H4:
     swpb r8
     call #UART_SEND_H2
@@ -90,8 +82,8 @@ UART_SEND_H4:
     call #UART_SEND_H2
     ret
 
-;================================
-; sends character from r8 at 9600
+;========================
+; sends character from r8
 UART_SEND:
     push r8
     push r10
@@ -117,6 +109,37 @@ UART_SEND:
     mov.w #0, &TACTL
     pop r10
     pop r8
+    ret
+
+;================================
+; waits and receives byte into r8
+UART_RECEIVE:
+    push r9
+    mov.w #(1000000 / BAUD_RATE - 1), &TACCR0
+    mov.w &TACCR0, &TAR
+    rra.w &TAR
+    mov #9, r9
+
+    uart_receive_wait:
+    bit.b #100b, &P2IN
+    jnz uart_receive_wait
+    mov.w #210h, &TACTL
+
+    uart_receive_next:
+    and.b #1, &TACCTL0
+    jz uart_receive_next
+    clrc
+    rrc.b r8
+    bit.b #100b, &P2IN
+    jz uart_receive_zero
+    bis.b #80h, r8
+    uart_receive_zero:
+    mov.b #0, &TACCTL0
+    dec.b r9
+    jnz uart_receive_next
+
+    mov.w #0, &TACTL
+    pop r9
     ret
 
 ;============================

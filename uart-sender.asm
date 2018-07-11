@@ -20,9 +20,9 @@ start:
     mov.b &CALDCO_1MHZ, &DCOCTL
     mov.b #2, &P1OUT
     mov.b #2, &P1DIR
-    ;rjmp timer ;uncomment for DCO check/calibration
+    ;jmp timer ;uncomment for DCO check/calibration
 
-; prints out TLV settings
+; receives character and prints its hex value
 repeat:
     call #UART_RECEIVE
     call #UART_SEND_H2
@@ -92,20 +92,20 @@ UART_SEND:
     bic.w #0FE00h, r8
     bis.w #100h, r8
     rla.w r8
-    
+
     uart_send_rep:
     and.b #1, &TACCTL0
     jz uart_send_rep
     mov.b #0, &TACCTL0
-    
+
     mov.b r8, r10
     and.b 1, r10
     add.b r10, r10
     mov.b r10, &P1OUT
-    
+
     rra.w r8
     jnz uart_send_rep
-    
+
     mov.w #0, &TACTL
     pop r10
     pop r8
@@ -156,7 +156,7 @@ DELAY:
     jnz delay_rep0
     pop r9
     pop r8
-    ret    
+    ret
 
 .org 0FFFEh
   dw start
